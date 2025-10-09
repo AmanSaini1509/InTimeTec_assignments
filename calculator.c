@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <limits.h>
 
 int integerStack[40]; // creating stack for integer operands
 int intStackTop = -1; // top for integer operand stack
