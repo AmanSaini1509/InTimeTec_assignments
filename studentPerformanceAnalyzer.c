@@ -1,14 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-struct studentDetail
+struct studentDetail //structure for Student Detail
 {
     int rollNo;
     char name[10];
     int marks[3];
 };
 
-int calculateTotalMarks(int marks[], int sizeOfArray)
+int calculateTotalMarks(int marks[], int sizeOfArray) // function to calculate the total marks
 {
     int totalMarks = 0;
     for (int i = 0; i < sizeOfArray; i++) {
@@ -17,7 +17,7 @@ int calculateTotalMarks(int marks[], int sizeOfArray)
     return totalMarks;
 }
 
-char assignGrade(float averageMark)
+char assignGrade(const float averageMark) //function to assign grade based on averageMarks
 {
     if (averageMark >= 85) return 'A';
     else if (averageMark >= 70) return 'B';
@@ -26,7 +26,7 @@ char assignGrade(float averageMark)
     else return 'F';
 }
 
-void displayPerformance(char grade)
+void displayPerformance(const char grade) // function to display performance
 {
     int numberOfStar = 0;
     switch (grade) {
@@ -51,30 +51,37 @@ void displayPerformance(char grade)
     }
 }
 
-void iterateStudents(struct studentDetail studentArray[], int sizeOfArray) {
+// function to display performances of students
+void displayStudentPerformances(struct studentDetail studentArray[], const int sizeOfArray)
+{
     for (int i = 0; i < sizeOfArray; i++) {
-        int sizeOfMarksArray = sizeof(studentArray[i].marks) / sizeof(studentArray[i].marks[0]);
-        printf("Roll: %d\n", studentArray[i].rollNo);
+        //calculating size of array of marks
+        const int sizeOfMarksArray = sizeof(studentArray[i].marks) / sizeof(studentArray[i].marks[0]);
 
-        printf("Name: %s\n", studentArray[i].name);
+        printf("Roll: %d\n", studentArray[i].rollNo); // roll no.
 
-        int totalMarks = calculateTotalMarks(studentArray[i].marks, sizeOfMarksArray);
-        printf("Total: %d\n", totalMarks);
+        printf("Name: %s\n", studentArray[i].name); // name
+
+        const int totalMarks = calculateTotalMarks(studentArray[i].marks, sizeOfMarksArray);
+        printf("Total: %d\n", totalMarks); // total marks
 
         const float averageMarks = (float)totalMarks / (float)sizeOfMarksArray;
-        printf("Average: %.2f\n", averageMarks);
+        printf("Average: %.2f\n", averageMarks); // average marks in float value
 
         char grade = assignGrade(averageMarks);
-        printf("Grade: %c\n", grade);
+        printf("Grade: %c\n", grade); // grade
+
         if (averageMarks < 35) continue;
         printf("Performance: ");
-        displayPerformance(grade);
+        displayPerformance(grade); // performance (print *)
         printf("\n");
         printf("\n");
     }
 }
 
-void printRollNumber(struct studentDetail studentArray[], int lastIndexOfArray) {
+//print roll numbers using recursion
+void printRollNumber(struct studentDetail studentArray[], int lastIndexOfArray)
+{
     if (lastIndexOfArray == 0) {
         printf("%d\t",studentArray[lastIndexOfArray].rollNo);
         return;
@@ -88,17 +95,19 @@ int main()
     int numberOfStudents = 0;
     printf("Enter number of students:\t");
     scanf("%d", &numberOfStudents);
+
     if (numberOfStudents <= 0 || numberOfStudents > 100) {
         printf("Invalid Input, number of student must be between 0 and 100\n");
         exit(0);
     }
-    struct studentDetail studentArray[numberOfStudents];
+
+    struct studentDetail studentArray[numberOfStudents]; // array for storing multiple student records
     for (int i = 0; i < numberOfStudents; i++) {
         printf("Enter student%d Roll no. | Name | marks of three subjects: ", i + 1);
         scanf("%d %s %d %d %d", &studentArray[i].rollNo, studentArray[i].name, &studentArray[i].marks[0], &studentArray[i].marks[1], &studentArray[i].marks[2]);
     }
 
-    iterateStudents(studentArray, numberOfStudents);
+    displayStudentPerformances(studentArray, numberOfStudents);
     printf("\n");
     printf("List of Roll Numbers (via recursion):\t");
     printRollNumber(studentArray, numberOfStudents - 1);
