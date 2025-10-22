@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+const int GRADE_A_THRESHOLD = 85;
+const int GRADE_B_THRESHOLD = 70;
+const int GRADE_C_THRESHOLD = 50;
+const int GRADE_D_THRESHOLD = 35;
+
 struct studentDetail //structure for Student Detail
 {
     int rollNo;
@@ -11,18 +16,18 @@ struct studentDetail //structure for Student Detail
 int calculateTotalMarks(int marks[], int sizeOfArray) // function to calculate the total marks
 {
     int totalMarks = 0;
-    for (int i = 0; i < sizeOfArray; i++) {
-        totalMarks += marks[i];
+    for (int iterator = 0; iterator < sizeOfArray; iterator++) {
+        totalMarks += marks[iterator];
     }
     return totalMarks;
 }
 
 char assignGrade(const float averageMark) //function to assign grade based on averageMarks
 {
-    if (averageMark >= 85) return 'A';
-    else if (averageMark >= 70) return 'B';
-    else if (averageMark >= 50) return 'C';
-    else if (averageMark >= 35) return 'D';
+    if (averageMark >= GRADE_A_THRESHOLD) return 'A';
+    else if (averageMark >= GRADE_B_THRESHOLD) return 'B';
+    else if (averageMark >= GRADE_C_THRESHOLD) return 'C';
+    else if (averageMark >= GRADE_D_THRESHOLD) return 'D';
     else return 'F';
 }
 
@@ -46,7 +51,7 @@ void displayPerformance(const char grade) // function to display performance
             numberOfStar = 0;
             break;
     }
-    for (int i = 0; i < numberOfStar; i++) {
+    for (int iterator = 0; iterator < numberOfStar; iterator++) {
         printf("%c", '*');
     }
 }
@@ -54,15 +59,15 @@ void displayPerformance(const char grade) // function to display performance
 // function to display performances of students
 void displayStudentPerformances(struct studentDetail studentArray[], const int sizeOfArray)
 {
-    for (int i = 0; i < sizeOfArray; i++) {
+    for (int iterator = 0; iterator < sizeOfArray; iterator++) {
         //calculating size of array of marks
-        const int sizeOfMarksArray = sizeof(studentArray[i].marks) / sizeof(studentArray[i].marks[0]);
+        const int sizeOfMarksArray = sizeof(studentArray[iterator].marks) / sizeof(studentArray[iterator].marks[0]);
 
-        printf("Roll: %d\n", studentArray[i].rollNo); // roll no.
+        printf("Roll: %d\n", studentArray[iterator].rollNo); // roll no.
 
-        printf("Name: %s\n", studentArray[i].name); // name
+        printf("Name: %s\n", studentArray[iterator].name); // name
 
-        const int totalMarks = calculateTotalMarks(studentArray[i].marks, sizeOfMarksArray);
+        const int totalMarks = calculateTotalMarks(studentArray[iterator].marks, sizeOfMarksArray);
         printf("Total: %d\n", totalMarks); // total marks
 
         const float averageMarks = (float)totalMarks / (float)sizeOfMarksArray;
@@ -102,9 +107,9 @@ int main()
     }
 
     struct studentDetail studentArray[numberOfStudents]; // array for storing multiple student records
-    for (int i = 0; i < numberOfStudents; i++) {
-        printf("Enter student%d Roll no. | Name | marks of three subjects: ", i + 1);
-        scanf("%d %s %d %d %d", &studentArray[i].rollNo, studentArray[i].name, &studentArray[i].marks[0], &studentArray[i].marks[1], &studentArray[i].marks[2]);
+    for (int iterator = 0; iterator < numberOfStudents; iterator++) {
+        printf("Enter student%d Roll no. | Name | marks of three subjects: ", iterator + 1);
+        scanf("%d %s %d %d %d", &studentArray[iterator].rollNo, studentArray[iterator].name, &studentArray[iterator].marks[0], &studentArray[iterator].marks[1], &studentArray[iterator].marks[2]);
     }
 
     displayStudentPerformances(studentArray, numberOfStudents);
