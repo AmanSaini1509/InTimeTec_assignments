@@ -26,7 +26,7 @@ bool hasDuplicateID(Product *products, int numberOfProducts, int productId)
 }
 
 //function for input of product details for initial products
-void enterDetails(Product *products, int numberOfProducts)
+void addDetails(Product *products, int numberOfProducts)
 {
     for (int iterate = 0; iterate < numberOfProducts; iterate++)
     {
@@ -348,7 +348,7 @@ int main() {
         return 1;
     }
 
-    enterDetails(products, numberOfProducts);
+    addDetails(products, numberOfProducts);
     printf("\n");
     printf("========= INVENTORY MENU =========\n");
     do {
