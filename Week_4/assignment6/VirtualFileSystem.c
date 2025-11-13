@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
+#include<stdbool.h>
 
 const int BLOCK_SIZE = 512;
 const int TOTAL_BLOCKS = 1024;
@@ -15,6 +16,8 @@ typedef struct freeList {
 typedef struct fileNode {
     char fileName[50];
     char filetype;
+    int dataSize;
+    int contentSize;
     struct fileNode *parent;
     struct fileNode *next;
     int *blockPointer;
@@ -77,6 +80,12 @@ char *extractCommand(char *input)
         index++;
     }
     command[index] = '\0';
+    if(index == 0)
+    {
+        printf("not found command\n");
+        free(command);
+        return NULL;
+    }
     return command;
 }
 
@@ -110,6 +119,12 @@ char *extractFileName(char *input)
         fileIndex++;
     }
     fileName[fileIndex] = '\0';
+    if(fileIndex == 0)
+    {
+        printf("not found file name\n");
+        free(fileName);
+        return NULL;
+    }
     return fileName;
 }
 
@@ -143,6 +158,12 @@ char *extractFileContent(char *input)
         index++;
     }
     fileContent[contentIndex] = '\0';
+    if(contentIndex == 0)
+    {
+        printf("not found file content\n");
+        free(fileContent);
+        return NULL;
+    }
     return fileContent;
 }
 
@@ -153,10 +174,12 @@ void createNewFile(fileNode *parent, char *fileName)
         printf("Invalid text file name");
         return;
     }
-    int i = strstr(fileName, ".txt");
-    int j = strchr(fileName, '\0');
+    char *i = strstr(fileName, ".txt");
+    char *j = strchr(fileName, '\0');
 
-    if (j - i != 4)
+    int indexFirst = i - fileName;
+    int indexSecond = j - fileName;
+    if (indexSecond - indexFirst != 4)
     {
         printf("Invalid file name");
         return;
@@ -168,6 +191,8 @@ void createNewFile(fileNode *parent, char *fileName)
     }
     strcpy(newFile->fileName, fileName);
     newFile->blockPointer = NULL;
+    newFile->dataSize = 0;
+    newFile->contentSize = 0;
     newFile->parent = parent;
     newFile->child = NULL;
     newFile->filetype = 't';
@@ -201,6 +226,8 @@ void createNewDir(fileNode *parent, char *dirName)
     }
     strcpy(newDir->fileName, dirName);
     newDir->blockPointer = NULL;
+    newDir->dataSize = 0;
+    newDir->contentSize = 0;
     newDir->parent = parent;
     newDir->child = NULL;
     newDir->filetype = 'd';
@@ -224,7 +251,7 @@ fileNode *moveToDir(fileNode *parent, char *dirName)
     if (strstr(dirName, ".txt") != NULL && strstr(dirName, "..") == NULL)
     {
         printf("Invalid directory name");
-        return;
+        return parent;
     }
     if(strstr(dirName, "..") != NULL)
     {
@@ -237,6 +264,11 @@ fileNode *moveToDir(fileNode *parent, char *dirName)
         return NULL;
     }
     fileNode *ptr = parent->child;
+    if(ptr == NULL)
+    {
+        printf("Empty directory\n");
+        return parent;
+    }
     while(ptr->next != parent->child)
     {
         if(strcmp(ptr->fileName, dirName) == 0 && ptr->filetype == 'd')
@@ -244,6 +276,10 @@ fileNode *moveToDir(fileNode *parent, char *dirName)
             return ptr;
         }
         ptr = ptr->next;
+    }
+    if(strcmp(ptr->fileName, dirName) == 0 && ptr->filetype == 'd')
+    {
+        return ptr;
     }
     printf("No such dirctory exist\n");
     return parent;
@@ -259,10 +295,35 @@ void listAllConent(fileNode *parent)
     fileNode *ptr = parent->child;
     while(ptr->next != parent->child)
     {
-        printf("%s\n", ptr->fileName);
+        if(ptr->filetype == 'd')
+        {
+            printf("%s/\n", ptr->fileName);
+        }
+        else
+        {
+            printf("%s\n", ptr->fileName);
+        }
         ptr = ptr->next;
     }
-    printf("%s\n", ptr->fileName);
+    if(ptr->filetype == 'd')
+    {
+        printf("%s/\n", ptr->fileName);
+    }
+    else
+    {
+        printf("%s\n", ptr->fileName);
+    }
+}
+
+void retunrPath(fileNode  *currentFile)
+{
+    if(currentFile->parent == NULL)
+    {
+        printf("%s", currentFile->fileName);
+        return;
+    }
+    retunrPath(currentFile->parent);
+    printf("/%s", currentFile->fileName);
 }
 
 void removeDirectory(fileNode *parent, char *dirName)
@@ -320,41 +381,166 @@ void removeDirectory(fileNode *parent, char *dirName)
     }
 }
 
-// void writeToFile(fileNode *file, char *content, byte *virtualDisk, freeList *freeListHead)
-// {
-//     const int contentSize = strlen(content);
-//     const int dataSize = (contentSize + BLOCK_SIZE - 1)/BLOCK_SIZE;
-//     if (dataSize > TOTAL_BLOCKS)
-//     {
-//         printf("File size exceeds the maximum limit\n");
-//         return;
-//     }
+freeList *writeToFile(fileNode *file, char *content, byte (*virtualDisk)[BLOCK_SIZE], freeList *freeListHead)
+{
+    const int contentSize = strlen(content);
+    const int dataSize = (contentSize + BLOCK_SIZE - 1)/BLOCK_SIZE;
+    if (dataSize > TOTAL_BLOCKS)
+    {
+        printf("File size exceeds the maximum limit\n");
+        return freeListHead;
+    }
 
-//     freeList *ptr = freeListHead;
-//     freeList *keepPtr = freeListHead;
-//     int allocatedBlocks = 0;
+    file->blockPointer = (int*)malloc(dataSize * sizeof(int));
+    if (file->blockPointer == NULL)
+    {
+        printf("Memory allocation failed for block pointers\n");
+        return freeListHead;
+    }
+    file->dataSize = dataSize;
+    file->contentSize = contentSize;
+    freeList *ptr = freeListHead;
+    freeList *keepPtr = freeListHead;
+    int allocatedBlocks = 0;
+    while(ptr != NULL && allocatedBlocks < dataSize)
+    {
+        for (int i = 0; i < contentSize  && i < BLOCK_SIZE; i++)
+        {
+            virtualDisk[ptr->index][i] = content[i + allocatedBlocks * BLOCK_SIZE];
+        }
+        file->blockPointer[allocatedBlocks] = ptr->index;
+        keepPtr = keepPtr->next;
+        if (keepPtr != NULL)
+        {
+            keepPtr->prev = NULL;
+        }
+        free(ptr);
+        ptr = keepPtr;
+        allocatedBlocks++;
+    }
 
-//     for (int i = 0; i < dataSize; i++)
-//     {
-//         int blockIndex = ptr->index;
-//     }
+    return ptr;
+}
 
-//     while(ptr != NULL && allocatedBlocks < dataSize)
-//     {
-//         keepPtr = keepPtr->next;
-//         keepPtr->prev = NULL;
-//         free(ptr);
-//         ptr = keepPtr;
-//         allocatedBlocks++;
-//     }
-// }
+void readFile(fileNode *file, byte (*virtualDisk)[BLOCK_SIZE])
+{
+    for (int i = 0; i < file->dataSize; i++)
+    {
+        for (int j = 0; j < file->contentSize; j++)
+        {
+            printf("%c", virtualDisk[file->blockPointer[i]][j]);
+        }
+        printf("\n");
+    }
+}
+
+freeList *freeBlocks(fileNode *file, freeList *head, freeList *tail)
+{
+    for (int i = 0; i < file->dataSize; i++)
+    {
+        freeList *freeNode = (freeList*)malloc(sizeof(freeList));
+        if (freeNode == NULL)
+        {
+            printf("Memory allocation failed for free list node\n");
+            return head;
+        }
+        freeNode->index = file->blockPointer[i];
+        freeNode->next = NULL;
+        freeNode->prev = tail;
+        tail->next = freeNode;
+        tail = freeNode;
+    }
+    return head;
+}
+
+freeList *deleteFile(fileNode *parent, char *fileName, freeList *listHead)
+{
+    if(strstr(fileName, ".txt") == NULL)
+    {
+        printf("Invalid text file name");
+        return listHead;
+    }
+    freeList *tail = listHead;
+    while (tail->next != NULL)
+    {
+        tail = tail->next;
+    }
+    
+    fileNode *ptr = parent->child;
+    if(ptr == NULL)
+    {
+        printf("current directory is empty\n");
+        return listHead;
+    }
+    if(ptr->next == parent->child)
+    {
+        if(strcmp(ptr->fileName, fileName) == 0 && ptr->filetype == 't')
+        {
+            listHead = freeBlocks(ptr, listHead, tail);
+            parent->child = NULL;
+            free(ptr->blockPointer);
+            free(ptr);
+            return listHead;
+        }
+        printf("No such file exist\n");
+        return listHead;
+    }
+    while(ptr->next != parent->child)
+    {
+        if(strcmp(ptr->fileName, fileName) == 0 && ptr->filetype == 't')
+        {
+            listHead = freeBlocks(ptr, listHead, tail);
+            fileNode *temp = parent->child;
+            while(temp->next != ptr)
+            {
+                temp = temp->next;
+            }
+            temp->next = ptr->next;
+            free(ptr->blockPointer);
+            free(ptr);
+            return listHead;
+        }
+    }
+    if(ptr != parent->child)
+    {
+        if(strcmp(ptr->fileName, fileName) == 0 && ptr->filetype == 't')
+        {
+            listHead = freeBlocks(ptr, listHead, tail);
+            fileNode *temp = parent->child;
+            while(temp->next != ptr)
+            {
+                temp = temp->next;
+            }
+            temp->next = ptr->next;
+            free(ptr->blockPointer);
+            free(ptr);
+            return listHead;
+        }
+    }
+    printf("No such file exist\n");
+    return listHead;
+}
+
+void storageDetails(freeList *head)
+{
+    int countFreeNodes = 0;
+    float usage = 0.00;
+    freeList *ptr = head;
+    while (ptr != NULL)
+    {
+        countFreeNodes++;
+        ptr = ptr->next;
+    }
+    int usedBlocks = TOTAL_BLOCKS - countFreeNodes;
+    usage = (usedBlocks / (float)TOTAL_BLOCKS) * 100;
+    printf("Total Blocks: %d\n", TOTAL_BLOCKS);
+    printf("Used Blocks: %d\n", usedBlocks);
+    printf("Free Blocks: %d\n", countFreeNodes);
+    printf("Disk Usage: %.2f%%\n", usage);
+}
 
 int main() {
-    byte *virtualDisk = (byte*)calloc(TOTAL_BLOCKS * BLOCK_SIZE, sizeof(byte));
-    if (virtualDisk == NULL) {
-        printf("Memory allocation failes\n");
-        return 1;
-    }
+    byte virtualDisk[TOTAL_BLOCKS][BLOCK_SIZE];
 
     freeList *head = createFreeList();
 
@@ -372,21 +558,41 @@ int main() {
         root->filetype = 'd';
     }
     root->parent = NULL;
+    root->dataSize = 0;
+    root->contentSize = 0;
     root->next = NULL;
     root->blockPointer = NULL;
     root->child = NULL;
 
     cwd = root;
     char input[100];
-    fgets(input, sizeof(input), stdin);
-    char *command = extractCommand(input);
-    char *fileName = extractFileName(input);
 
-    if (strcmp(command, "mkdir") == 0)
+    printf("$ ./vfs\nCompact VFS - ready. Type 'exit' to quit.\n");
+    while(1)
+    {
+        printf("%s >", cwd->fileName);
+        fgets(input, sizeof(input), stdin);
+        input[strcspn(input, "\n")] = '\0';
+
+        char *command = extractCommand(input);
+        char *fileName = NULL;
+        if(strcmp(command, "ls") != 0 && strcmp(command, "df") != 0 && strcmp(command, "pwd") != 0 && strcmp(command, "exit") != 0)
+        {
+            fileName = extractFileName(input);
+        }
+
+        if (strcmp(command, "exit") == 0)
+        {
+            break;
+        }
+        if (strcmp(command, "mkdir") == 0)
     {
         if (fileName != NULL)
         {
             createNewDir(cwd, fileName);
+            printf("Dirctory %s created successfully\n", fileName);
+            free(fileName);
+            free(command);
         }
     }
     else if (strcmp(command, "create") == 0)
@@ -394,6 +600,9 @@ int main() {
         if (fileName != NULL)
         {
             createNewFile(cwd, fileName);
+            printf("File %s created successfully\n", fileName);
+            free(fileName);
+            free(command);
         } 
     }
     else if (strcmp(command, "cd") == 0)
@@ -401,6 +610,9 @@ int main() {
         if (fileName != NULL)
         {
             cwd = moveToDir(cwd, fileName);
+            printf("Moved to /%s\n", cwd->fileName);
+            free(fileName);
+            free(command);
         }
     }
     else if (strcmp(command, "ls") == 0)
@@ -408,29 +620,144 @@ int main() {
         if(fileName == NULL)
         {
             listAllConent(cwd);
+            free(command);
+
+        }
+    }
+    else if (strcmp(command, "pwd") == 0)
+    {
+        if(fileName == NULL)
+        {
+            retunrPath(cwd);
+            printf("\n");
+            free(command);
+        }
+    }
+    else if (strcmp(command, "read") == 0)
+    {
+        if(fileName != NULL)
+        {
+            fileNode *ptr = cwd->child;
+            bool found = false;
+            while(ptr->next != cwd->child)
+            {
+                if(strcmp(ptr->fileName, fileName) == 0 && ptr->filetype == 't')
+                {
+                    readFile(ptr, virtualDisk);
+                    found = true;
+                    break;
+                }
+                ptr = ptr->next;
+            }
+            if(!found && strcmp(ptr->fileName, fileName) == 0 && ptr->filetype == 't')
+            {
+                readFile(ptr, virtualDisk);
+                found = true;
+            }
+            if(!found)
+            {
+                printf("No such file exist\n");
+            }
+            free(fileName);
+            free(command);
         }
     }
     else if (strcmp(command, "write") == 0)
     {
-    
-
+        char *fileContent = extractFileContent(input);
+        if(fileName != NULL && fileContent != NULL)
+        {
+            fileNode *ptr = cwd->child;
+            int found = 0;
+            while(ptr->next != cwd->child)
+            {
+                if(strcmp(ptr->fileName, fileName) == 0 && ptr->filetype == 't')
+                {
+                    freeList *newhead = writeToFile(ptr, fileContent, virtualDisk, head);
+                    head = newhead;
+                    found = 1;
+                    printf("Data written successfully [size: %d bytes]\n", strlen(fileContent));
+                    free(fileContent);
+                    break;
+                }
+                ptr = ptr->next;
+            }
+            if(!found && strcmp(ptr->fileName, fileName) == 0 && ptr->filetype == 't')
+            {
+                freeList *newhead = writeToFile(ptr, fileContent, virtualDisk, head);
+                head = newhead;
+                found = true;
+                printf("Data written successfully [size: %d bytes]\n", strlen(fileContent));
+                free(fileContent);
+            }
+            if(!found)
+            {
+                printf("No such file exist\n");
+                free(fileContent);
+            }
+            free(fileName);
+            free(command);
+        }
     }
     else if (strcmp(command, "delete") == 0)
     {
-
+        if (fileName != NULL)
+        {
+            freeList *newhead = deleteFile(cwd, fileName, head);
+            head = newhead;
+            printf("File deleted successfully\n");
+            free(fileName);
+            free(command);
+        }
     }
     else if (strcmp(command, "rmdir") == 0)
     {
         if (fileName != NULL)
         {
             removeDirectory(cwd, fileName);
+            free(fileName);
+            free(command);
+        }
+    }
+    else if (strcmp(command, "df") == 0)
+    {
+        if (fileName == NULL)
+        {
+            storageDetails(head);
+            free(command);
         }
     }
     else
     {
-
+        printf("Invalid command\n");
+        if (fileName != NULL) free(fileName);
+        fileName = NULL;
+        if (command != NULL) free(command);
+        command = NULL;
+    }
     }
 
+    freeList *freePtr = head;
+    freeList *ptr = head;
+    while(freePtr != NULL)
+    {
+        ptr = freePtr->next;
+        free(freePtr);
+        freePtr = ptr;
+    }
+    fileNode *filePtr = root;
+    fileNode *fileTemp;
+    while(filePtr != NULL)
+    {
+        fileTemp = filePtr->next;
+        if(filePtr->blockPointer != NULL)
+        {
+            free(filePtr->blockPointer);
+        }
+        free(filePtr);
+        filePtr = fileTemp;
+    }
+    
     return 0;
     
 }
