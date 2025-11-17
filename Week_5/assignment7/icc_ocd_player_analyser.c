@@ -28,6 +28,7 @@ typedef struct Team {
     struct Team *next;
 }Team;
 
+Team **teamArray;
 
 bool checkPlayerIdExist(PlayerNode *listHead, int id)
 {
@@ -176,8 +177,37 @@ Team *createTeamList(PlayerNode *playerListHead)
         teamPtr = teamPtr->next;
     }
 
-    return head;
+    teamArray = (Team**)malloc(teamCount * sizeof(Team*));
+    Team *temp = head;
+    int index = 0;
 
+    while (temp != NULL)
+    {
+        teamArray[index] = temp;
+        index++;
+        temp = temp->next;
+    }
+
+    return head;
+}
+
+Team *findTeamById(int id)
+{
+    int low = 0;
+    int high = teamCount - 1;
+
+    while(low <= high)
+    {
+        int mid = (low + high) / 2;
+
+        if(teamArray[mid]->teamID == id)
+            return teamArray[mid];
+        else if (teamArray[mid]->teamID < id)
+            low = mid + 1;
+        else
+            high = mid - 1;
+    }
+    return NULL;
 }
 
 void displayPlayersOfTeam(PlayerNode *playerListHead, Team *teamListHead)
@@ -191,13 +221,7 @@ void displayPlayersOfTeam(PlayerNode *playerListHead, Team *teamListHead)
         return;
     }
 
-    Team *teamPtr = teamListHead;
-    while (teamPtr != NULL)
-    {
-        if(teamPtr->teamID == teamID)
-            break;
-        teamPtr = teamPtr->next;
-    }
+    Team *teamPtr = findTeamById(teamID);
 
     if(teamPtr == NULL)
     {
@@ -269,17 +293,12 @@ void addPlayerToTeam(PlayerNode **playerListHead, Team *teamListHead)
     printf("Enter Team ID to add player: ");
     if (scanf("%d", &teamID) != 1)
     {
-        printf("Invalid input!\n");
+        printf("Invalid input, enter integer!\n");
         while (getchar() != '\n');
         return;
     }
 
-    Team *teamPtr = teamListHead;
-    while (teamPtr != NULL)
-    {
-        if(teamPtr->teamID == teamID) break;
-        teamPtr = teamPtr->next;
-    } 
+    Team *teamPtr = findTeamById(teamID);
 
     if (teamPtr == NULL)
     {
@@ -300,32 +319,72 @@ void addPlayerToTeam(PlayerNode **playerListHead, Team *teamListHead)
     newNode->role = malloc(50 * sizeof(char));
 
     printf("Enter Player Name: ");
-    scanf("%49s", newNode->playerName);  
+    while(getchar() != '\n');
+    fgets(newNode->playerName, 50, stdin);
+    newNode->playerName[strcspn(newNode->playerName, "\n")] = '\0';  
 
     strcpy(newNode->teamName, teamPtr->teamName);
 
     int roleChoice;
     printf("Role (1-Batsman, 2-Bowler, 3-All-rounder): ");
-    scanf("%d", &roleChoice);
+    if(scanf("%d", &roleChoice) != 1)
+    {
+        printf("Invalid input, enter integer from given choice.\n");
+        while (getchar() != '\n');
+        return;
+    }
 
-    if (roleChoice == 1) strcpy(newNode->role, "Batsman");
-    else if (roleChoice == 2) strcpy(newNode->role, "Bowler");
-    else strcpy(newNode->role, "All-rounder");
+    char selectedRole[20];
+    if (roleChoice == 1) strcpy(selectedRole, "Batsman");
+    else if (roleChoice == 2) strcpy(selectedRole, "Bowler");
+    else if (roleChoice == 3) strcpy(selectedRole, "All-rounder");
+    else
+    {
+        printf("Invalid choice\n");
+        while (getchar() != '\n');
+        return;
+    }
+    strcpy(newNode->role, selectedRole);
 
     printf("Total Runs: ");
-    scanf("%d", &newNode->totalRuns);
-
+    if (scanf("%d", &newNode->totalRuns) != 1)
+    {
+        printf("Invalid input, enter integer!\n");
+        while (getchar() != '\n');
+        return;
+    }
+    
     printf("Batting Average: ");
-    scanf("%f", &newNode->battingAverage);
+    if(scanf("%f", &newNode->battingAverage) != 1)
+    {
+        printf("Invalid input, enter integer or decimal value!\n");
+        while (getchar() != '\n');
+        return;
+    }
 
     printf("Strike Rate: ");
-    scanf("%f", &newNode->strikeRate);
+    if(scanf("%f", &newNode->strikeRate) != 1)
+    {
+        printf("Invalid input, enter integer or decimal value!\n");
+        while (getchar() != '\n');
+        return;
+    }
 
     printf("Wickets: ");
-    scanf("%d", &newNode->wickets);
+    if(scanf("%d", &newNode->wickets) != 1)
+    {
+        printf("Invalid input, enter integer value!\n");
+        while (getchar() != '\n');
+        return;
+    }
 
     printf("Economy Rate: ");
-    scanf("%f", &newNode->economyRate);
+    if(scanf("%f", &newNode->economyRate) != 1)
+    {
+        printf("Invalid input, enter integer or decimal value!\n");
+        while (getchar() != '\n');
+        return;
+    }
 
     newNode->perfoemanceIndex = calculatePerformanceIndex(newNode);
 
@@ -371,6 +430,192 @@ void addPlayerToTeam(PlayerNode **playerListHead, Team *teamListHead)
     printf("Player added successfully to Team %s!\n", teamPtr->teamName);
 }
 
+void displayTopKPlayersByRole(PlayerNode *playerListHead, Team *teamListHead)
+{
+    int teamID;
+    printf("Enter Team ID: ");
+
+    if (scanf("%d", &teamID) != 1)
+    {
+        printf("Invalid input, enter integer\n");
+        while (getchar() != '\n');
+        return;
+    }
+
+    Team *teamPtr = findTeamById(teamID);
+
+    if (teamPtr == NULL)
+    {
+        printf("Team not found!\n");
+        return;
+    }
+
+    int roleChoice;
+    printf("Enter Role (1-Batsman, 2-Bowler, 3-All-rounder): ");
+    if(scanf("%d", &roleChoice) != 1)
+    {
+        printf("Invalid input, enter integer from given choice.\n");
+        while (getchar() != '\n');
+        return;
+    }
+
+    char selectedRole[20];
+    if (roleChoice == 1) strcpy(selectedRole, "Batsman");
+    else if (roleChoice == 2) strcpy(selectedRole, "Bowler");
+    else if (roleChoice == 3) strcpy(selectedRole, "All-rounder");
+    else
+    {
+        printf("Invalid choice/n");
+        while (getchar() != '\n');
+        return;
+    }
+
+    int topK;
+    printf("Enter number of players (K): ");
+    scanf("%d", &topK);
+    
+    int cntPlayers;
+    PlayerNode *playerPtr = playerListHead;
+
+    while (playerPtr != NULL)
+    {
+        if (strcmp(playerPtr->teamName, teamPtr->teamName) == 0 && strcmp(playerPtr->role, selectedRole) == 0)
+        {
+            cntPlayers++;
+        }
+        playerPtr = playerPtr->next;
+    }
+
+    if(cntPlayers == 0)
+    {
+        printf("No players found for given role in team\n");
+        return;
+    }
+
+    PlayerNode **playerArr = (PlayerNode**)malloc(cntPlayers * sizeof(PlayerNode*));
+    playerPtr = playerListHead;
+    int index = 0;
+
+    while(playerPtr != NULL)
+    {
+        if(strcmp(playerPtr->teamName, teamPtr->teamName) == 0 && strcmp(playerPtr->role, selectedRole) == 0)
+        {
+            playerArr[index] = playerPtr;
+            index++;
+        }
+        playerPtr = playerPtr->next;
+    }
+
+    for(int i = 0; i < cntPlayers; i++)
+    {
+        for(int j = i + 1; j < cntPlayers; j++)
+        {
+            if (playerArr[i]->perfoemanceIndex < playerArr[j]->perfoemanceIndex)
+            {
+                PlayerNode *swap = playerArr[i];
+                playerArr[i] = playerArr[j];
+                playerArr[j] = swap;
+            }
+        }
+    }
+
+    if(topK > cntPlayers) topK = cntPlayers;
+
+    printf("\nTop %d %s(s) of Team %s:\n", topK, selectedRole, teamPtr->teamName);
+    printf("====================================================================================\n");
+    printf("ID\tName\t\tRole\tRuns\tAvg\tSR\tWkts\tER\tPerf.Index\n");
+    printf("====================================================================================\n");
+
+    for (int i = 0; i < topK; i++)
+    {
+        printf("%d\t%s\t%s\t%d\t%.2f\t%.2f\t%d\t%.2f\t%.2f\n", playerArr[i]->playerID, playerArr[i]->playerName, playerArr[i]->role, playerArr[i]->totalRuns,
+               playerArr[i]->battingAverage, playerArr[i]->strikeRate, playerArr[i]->wickets, playerArr[i]->economyRate, playerArr[i]->perfoemanceIndex);
+    }
+    printf("====================================================================================\n");
+    free(playerArr);
+}
+
+void displayPlayersByRoleAcrossTeams(PlayerNode *playerListHead)
+{
+    int roleChoice;
+    printf("Enter Role (1-Batsman, 2-Bowler, 3-All-rounder): ");
+    if(scanf("%d", &roleChoice) != 1)
+    {
+        printf("Invalid input, enter integer from given choice.\n");
+        while (getchar() != '\n');
+        return;
+    }
+
+    char selectedRole[20];
+    if (roleChoice == 1) strcpy(selectedRole, "Batsman");
+    else if (roleChoice == 2) strcpy(selectedRole, "Bowler");
+    else if (roleChoice == 3) strcpy(selectedRole, "All-rounder");
+    else
+    {
+        printf("Invalid choice/n");
+        while (getchar() != '\n');
+        return;
+    }
+
+    int cntPlayers = 0;
+    PlayerNode *playerPtr = playerListHead;
+    
+    while(playerPtr != NULL)
+    {
+        if (strcmp(playerPtr->role, selectedRole) == 0) cntPlayers++;
+        playerPtr = playerPtr->next;
+    }
+
+    if(cntPlayers == 0)
+    {
+        printf("No players found for given role\n");
+        return;
+    }
+
+    PlayerNode **playerArr = (PlayerNode**)malloc(cntPlayers * sizeof(PlayerNode*));
+    playerPtr = playerListHead;
+    int index = 0;
+
+    while(playerPtr != NULL)
+    {
+        if(strcmp(playerPtr->role, selectedRole) == 0)
+        {
+            playerArr[index] = playerPtr;
+            index++;
+        }
+        playerPtr = playerPtr->next;
+    }
+
+    for (int i = 0; i < cntPlayers; i++)
+    {
+        for (int j = i + 1; j < cntPlayers; j++)
+        {
+            if(playerArr[i]->perfoemanceIndex < playerArr[j]->perfoemanceIndex)
+            {
+                PlayerNode *swap = playerArr[i];
+                playerArr[i] = playerArr[j];
+                playerArr[j] = swap;
+            }
+        }
+    }
+
+    printf("\n%s of all Teams:\n", selectedRole);
+    printf("======================================================================================\n");
+    printf("ID\tName\t\tTeam\t\tRole\tRuns\tAvg\tSR\tWkts\tER\tPerf.Index\n");
+    printf("======================================================================================\n");
+
+    for (int i = 0; i < cntPlayers; i++)
+    {
+        printf("%d\t%s\t\t%s\t\t%s\t%d\t%.2f\t%.2f\t%d\t%.2f\t%.2f\n", playerArr[i]->playerID, playerArr[i]->playerName, playerArr[i]->teamName,
+            playerArr[i]->role, playerArr[i]->totalRuns, playerArr[i]->battingAverage, playerArr[i]->strikeRate, playerArr[i]->wickets,
+            playerArr[i]->economyRate, playerArr[i]->perfoemanceIndex);
+    }
+    printf("======================================================================================\n");
+
+    free(playerArr);
+
+}
+
 
 int main()
 {
@@ -406,30 +651,45 @@ int main()
             case 1:
                 addPlayerToTeam(&playerListHead, teamListHead);
                 break;
-
             case 2:
                 displayPlayersOfTeam(playerListHead, teamListHead);
                 break;
-
             case 3:
                 displayTeamsByAvgSR(teamListHead);
                 break;
-
             case 4:
+                displayTopKPlayersByRole(playerListHead, teamListHead);
                 break;
-
             case 5:
+                displayPlayersByRoleAcrossTeams(playerListHead);
                 break;
-
             case 6:
                 printf("Exiting\n");
                 break;
-
             default:
                 printf("Invalid choice! Please try again.\n");
+                break;
         }
 
     } while (choice != 6);
+
+    PlayerNode *playerPtr = playerListHead;
+    while (playerListHead != NULL)
+    {
+        playerListHead = playerListHead->next;
+        free(playerPtr);
+        playerPtr = playerListHead;
+    }
+
+    Team *teamPtr = teamListHead;
+    while(teamListHead != NULL)
+    {
+        teamListHead = teamListHead->next;
+        free(teamPtr);
+        teamPtr = teamListHead;
+    }
+
+    free(teamArray);
     
     return 0;
 }
